@@ -35,7 +35,7 @@ class App extends Component {
       _.forEach(competition, (item, idx) => {
         const {competition} = this.state;
         if (res.betfair_event_id === item.match.betfair_event_id) {
-          if (item.event_id !== undefined) {
+          if (item.market.event_id !== undefined) {
             newMarket = item.market;
           }
 
@@ -65,7 +65,6 @@ class App extends Component {
 
     socket.on('/market', (res) => {
       const {competition} = this.state;
-      const {market, match} = competition;
       let exist = false;
 
       let overAtb = 0, overAtl = 0, underAtb = 0, underAtl = 0, over = 0, under = 0;
