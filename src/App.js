@@ -12,8 +12,6 @@ class App extends Component {
 
     this.state = {
       competition: [],
-      match: [],
-      market: [],
     };
 
     const socket = io('http://188.166.85.23:49160');
@@ -36,7 +34,7 @@ class App extends Component {
         const {competition} = this.state;
         if (res.betfair_event_id === item.match.betfair_event_id) {
           if (item.market.event_id !== undefined) {
-            newMarket = item.market;
+            newMarket = {...item.market, };
           }
 
           this.setState({
@@ -65,7 +63,6 @@ class App extends Component {
 
     socket.on('/market', (res) => {
       const {competition} = this.state;
-      let exist = false;
 
       let overAtb = 0, overAtl = 0, underAtb = 0, underAtl = 0, over = 0, under = 0;
       _.forEach(res.overUnder15.over.atb, (item) => {
@@ -83,35 +80,30 @@ class App extends Component {
 
       _.forEach(competition, (item, idx) => {
         if (item.match.betfair_event_id === res.event_id) {
-          const sumOver = overAtb + overAtl, sumUnder = underAtb + underAtl;
+          let over = overAtb + overAtl, under = underAtb + underAtl;
           let overOpacity = 1, overUp = true, underOpacity = 1, underUp = true;
 
-          /*if (item !== null) {
-            if (sumOver > item.over) {
-              overOpacity = 1;
-              overUp = false;
-            } else if (sumOver < item.over) {
-              overOpacity = 1;
-              overUp = true;
-            } else {
-              overOpacity = item.overOpacity;
-              overUp = item.overUp;
-            }
+          if (over > item.market.over) {
+            overOpacity = 1;
+            overUp = true;
+          } else if (over < item.market.over) {
+            overOpacity = 1;
+            overUp = false;
+          } else {
+            overOpacity = item.market.overOpacity;
+            overUp = item.market.overUp;
+          }
 
-            if (sumUnder > item.under) {
-              underOpacity = 1;
-              underUp = false;
-            } else if (sumUnder < item.under) {
-              underOpacity = 1;
-              underUp = true;
-            } else {
-              underOpacity = item.underOpacity;
-              underUp = item.underUp;
-            }
-          }*/
-
-          over = overAtb + overAtl;
-          under = underAtb + underAtl;
+          if (under > item.market.under) {
+            underOpacity = 1;
+            underUp = true;
+          } else if (under < item.market.under) {
+            underOpacity = 1;
+            underUp = false;
+          } else {
+            underOpacity = item.market.underOpacity;
+            underUp = item.market.underUp;
+          }
 
           this.setState({
             competition: [
@@ -135,7 +127,6 @@ class App extends Component {
           }, () => {
             console.log('Competition Market', this.state.competition);
           });
-          exist = true;
         }
       });
     });

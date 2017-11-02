@@ -10,36 +10,34 @@ class Card extends Component {
 
     this.state = {
       underUp: true,
-      underOpacity: 1,
+      underOpacity: 0,
       overUp: true,
-      overOpacity: 1,
+      overOpacity: 0,
     };
   }
 
   componentDidMount() {
-    console.log('Card', this.props);
-    setTimeout(() => {
+    setInterval(() => {
       if (this.state.overOpacity > 0){
         this.setState({
-          overUp: true,
           overOpacity: this.state.overOpacity - 0.1,
         });
       }
       if (this.state.underOpacity > 0){
         this.setState({
-          underUp: true,
           underOpacity: this.state.underOpacity - 0.1,
         });
       }
     }, 100);
   }
 
-  componentDidUpdate(prevProps, prevState) {
+  componentWillReceiveProps(nextProps) {
+    console.log('this.props', this.props);
+    console.log('nextProps', nextProps);
 
-    //console.log('prevProps -> ', prevProps);
-    //console.log('prevState -> ', prevState);
-    //console.log('Props -> ', this.state);
-    //console.log('State -> ', this.props);
+    const {overUp, overOpacity, underUp, underOpacity} = nextProps.market;
+
+    this.setState({overUp, overOpacity, underUp, underOpacity,});
   }
 
   render() {
