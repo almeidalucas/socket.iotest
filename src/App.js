@@ -1,9 +1,9 @@
 import React, {Component} from 'react';
 import './App.css';
 import io from 'socket.io-client';
-import ArrowDownward from 'material-ui/svg-icons/navigation/arrow-downward';
-import ArrowUpward from 'material-ui/svg-icons/navigation/arrow-upward';
+import _ from 'lodash';
 
+import Card from './components/component.card';
 
 class App extends Component {
 
@@ -11,148 +11,150 @@ class App extends Component {
     super();
 
     this.state = {
-      match: undefined,
-      market: undefined,
-      team_home: 'Carregando...',
-      team_visitor: 'Caregando...',
-      odd: 'Carregando...',
-      over: 0,
-      under: 0,
-      overUp: true,
-      underUp: true,
-      overOpacity: 0,
-      underOpacity: 0,
+      competition: [],
+      match: [],
+      market: [],
     };
 
     const socket = io('http://188.166.85.23:49160');
 
     socket.on('/match', (res) => {
-      const {match} = this.state;
-      const {team_home, team_visitor} = res;
-      if (match === undefined) {
-        this.setState({match: res, team_home, team_visitor}, () => {});
+      const {competition} = this.state;
+      let exist = false;
+
+      let newMarket = {
+        odd: 'Carregando...',
+        overUp: false,
+        overOpacity: 0,
+        over: 0,
+        underUp: false,
+        underOpacity: false,
+        under: 0,
+      };
+
+      _.forEach(competition, (item, idx) => {
+        const {competition} = this.state;
+        if (res.betfair_event_id === item.match.betfair_event_id) {
+          if (item.event_id !== undefined) {
+            newMarket = item.market;
+          }
+
+          this.setState({
+            competition: [
+              ..._.slice(competition, 0, idx),
+              {match: res, market: newMarket},
+              ..._.slice(competition, idx + 1, competition.length)],
+          }, () => {
+            console.log('Competition', this.state.competition);
+          });
+          exist = true;
+        }
+      });
+
+      if (!exist) {
+        this.setState({
+          competition: _.concat(competition, {
+            match: res,
+            market: newMarket,
+          }),
+        }, () => {
+          console.log('Match', this.state.competition);
+        });
       }
     });
 
     socket.on('/market', (res) => {
-      const {market, match} = this.state;
-      if (market === undefined && match !== undefined && match.betfair_event_id === res.event_id) {
-        this.setState({market: res}, () => {
-          const {market} = this.state;
+      const {competition} = this.state;
+      const {market, match} = competition;
+      let exist = false;
 
-          let overAtb = 0, overAtl = 0, underAtb = 0, underAtl = 0;
-          this.state.market.overUnder15.over.atb.map((item) => {
-            overAtb += item.price;
-          });
-          market.overUnder15.over.atl.map((item) => {
-            overAtl += item.price;
-          });
-          market.overUnder15.under.atb.map((item) => {
-            underAtb += item.price;
-          });
-          market.overUnder15.under.atl.map((item) => {
-            underAtl += item.price;
-          });
+      let overAtb = 0, overAtl = 0, underAtb = 0, underAtl = 0, over = 0, under = 0;
+      _.forEach(res.overUnder15.over.atb, (item) => {
+        overAtb += item.price;
+      });
+      _.forEach(res.overUnder15.over.atl, (item) => {
+        overAtl += item.price;
+      });
+      _.forEach(res.overUnder15.under.atb, (item) => {
+        underAtb += item.price;
+      });
+      _.forEach(res.overUnder15.under.atl, (item) => {
+        underAtl += item.price;
+      });
 
-          this.setState({overOpacity: 1, overUp: true, underOpacity: 1, underUp: true,});
-
-          this.setState(
-            {
-              over: Number(overAtb + overAtl).toFixed(2),
-              under: Number(underAtb + underAtl).toFixed(2),
-              odd: Number(market.overUnder15.over.bdatb[0].price).toFixed(2),
-            },
-            () => {
-            },
-          );
-        });
-      } else if (market !== undefined && match.betfair_event_id === res.event_id) {
-        this.setState({market: res}, () => {
-          const {market, over, under} = this.state;
-
-          let overAtb = 0, overAtl = 0, underAtb = 0, underAtl = 0;
-          this.state.market.overUnder15.over.atb.map((item) => {
-            overAtb += item.price;
-          });
-          market.overUnder15.over.atl.map((item) => {
-            overAtl += item.price;
-          });
-          market.overUnder15.under.atb.map((item) => {
-            underAtb += item.price;
-          });
-          market.overUnder15.under.atl.map((item) => {
-            underAtl += item.price;
-          });
-
+      _.forEach(competition, (item, idx) => {
+        if (item.match.betfair_event_id === res.event_id) {
           const sumOver = overAtb + overAtl, sumUnder = underAtb + underAtl;
+          let overOpacity = 1, overUp = true, underOpacity = 1, underUp = true;
 
-          if (sumOver > over) this.setState({overOpacity: 1, overUp: false,});
-          else if(sumOver < over) this.setState({overOpacity: 1, overUp: true,});
+          /*if (item !== null) {
+            if (sumOver > item.over) {
+              overOpacity = 1;
+              overUp = false;
+            } else if (sumOver < item.over) {
+              overOpacity = 1;
+              overUp = true;
+            } else {
+              overOpacity = item.overOpacity;
+              overUp = item.overUp;
+            }
 
-          if (sumUnder > under) this.setState({underOpacity: 1, underUp: false,});
-          else if(sumUnder < under) this.setState({underOpacity: 1, underUp: true,});
+            if (sumUnder > item.under) {
+              underOpacity = 1;
+              underUp = false;
+            } else if (sumUnder < item.under) {
+              underOpacity = 1;
+              underUp = true;
+            } else {
+              underOpacity = item.underOpacity;
+              underUp = item.underUp;
+            }
+          }*/
 
-          this.setState(
-            {
-              over: Number(sumOver).toFixed(2),
-              under: Number(sumUnder).toFixed(2),
-              odd: Number(market.overUnder15.over.bdatb[0].price).toFixed(2),
-            },
-            () => {
-            },
-          );
-        });
-      }
+          over = overAtb + overAtl;
+          under = underAtb + underAtl;
+
+          this.setState({
+            competition: [
+              ..._.slice(competition, 0, idx),
+              {
+                match: item.match,
+                market: {
+                  ...res,
+                  overOpacity,
+                  overUp,
+                  underOpacity,
+                  underUp,
+                  over: Number(over).toFixed(2),
+                  under: Number(under).toFixed(2),
+                  odd: Number(res.overUnder15.over.bdatb[0].price).toFixed(2),
+                  overPercent: Number(100 * over / (over + under)).toFixed(2),
+                  underPercent: Number(100 * under / (over + under)).toFixed(2),
+                },
+              },
+              ..._.slice(competition, idx + 1, competition.length)],
+          }, () => {
+            console.log('Competition Market', this.state.competition);
+          });
+          exist = true;
+        }
+      });
     });
   }
 
   componentDidMount() {
-    setInterval(() => {
-      const {underOpacity, overOpacity} = this.state;
-
-      if (underOpacity > 0) this.setState({underOpacity: underOpacity - 0.1});
-      if (overOpacity > 0) this.setState({overOpacity: overOpacity - 0.1});
-    }, 100);
   }
 
   render() {
-    const {over, under, odd, team_home, team_visitor, overUp, underUp, overOpacity, underOpacity} = this.state;
+    const {competition} = this.state;
 
     return (
-      <div className="App">
-        <header className="App-header">
-          <div className="top-line">
-            <span className="header-live">LIVE</span>
-          </div>
-          <div className="odd-block">
-            <h1 className="App-title">ODD: {odd}</h1>
-          </div>
-          <div className="bop-line">
-            <span className="header-time">22:12</span>
-          </div>
-        </header>
-        <div className="game">
-          <div className="teams">
-            <div className="team">
-              <p>{team_home}</p>
-              <span>1</span>
-            </div>
-            <div className="team">
-              <span>1</span>
-              <p>{team_visitor}</p>
-            </div>
-          </div>
-          <div className="over-under">
-            <div className="over">
-              <p className="over-percent">OVER: 18%</p>
-              <p className="over-under-p">{overUp ? <ArrowUpward style={{fillOpacity: overOpacity, color: '#e7375d',}} /> : <ArrowDownward style={{fillOpacity: overOpacity, color: '#e7375d',}} />} £ {over}</p>
-            </div>
-            <div className="under">
-              <p className="under-percent">UNDER: 86%</p>
-              <p className="over-under-p">{underUp ? <ArrowUpward style={{fillOpacity: underOpacity, color: '#7320ea',}} /> : <ArrowDownward style={{fillOpacity: underOpacity, color: '#7320ea',}} />} £ {under}</p>
-            </div>
-          </div>
-        </div>
+      <div>
+        {
+          competition.map((item, idx) => {
+            return (<Card key={item.match.betfair_event_id} match={item.match} market={item.market}/>);
+          })
+        }
       </div>
     );
   }
